@@ -1,0 +1,56 @@
+# =============================================================================
+# OpenCode + Shepherd (auto-update)
+# Rode com: docker compose up -d
+# =============================================================================
+
+services:
+  # OpenCode - AI coding agent
+  opencode:
+    image: ghcr.io/SEU_USUARIO_GITHUB/opencode:latest
+    container_name: opencode
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    volumes:
+      # Seus projetos (adicione quantos quiser)
+      - ./projects:/workspace:rw
+      # Dados persistentes do OpenCode (config, auth, etc)
+      - opencode-data:/root/.local/share/opencode
+      - opencode-config:/root/.config/opencode
+      # Socket do Docker (caso OpenCode precise rodar containers)
+      - /var/run/docker.sock:/var/run/docker.sock
+    working_dir: /workspace
+    environment:
+      - TERM=xterm-256color
+      # Descomente e preencha com suas API keys:
+      # - ANTHROPIC_API_KEY=sk-ant-...
+      # - OPENAI_API_KEY=sk-...
+      # - OPENCODE_API_KEY=...
+    labels:
+      # Label que o Shepherd usa para saber que deve monitorar este container
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # Shepherd - monitora e atualiza containers automaticamente
+  shepherd:
+    image: containrrr/watchtower:latest
+    container_name: shepherd
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Credenciais do GHCR para puxar imagens privadas
+      - ~/.docker/config.json:/config.json:ro
+    environment:
+      # Verificar atualizações a cada 30 minutos (1800 segundos)
+      - WATCHTOWER_POLL_INTERVAL=1800
+      # Só atualizar containers com a label habilitada
+      - WATCHTOWER_LABEL_ENABLE=true
+      # Remover imagens antigas automaticamente
+      - WATCHTOWER_CLEANUP=true
+      # Notificações no log
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      # Timezone
+      - TZ=America/Sao_Paulo
+
+volumes:
+  opencode-data:
+  opencode-config:
